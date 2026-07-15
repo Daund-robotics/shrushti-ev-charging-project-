@@ -1,0 +1,44 @@
+========================================================================
+                      VOLTCHARGE EV CHARGING SYSTEM
+                            SYSTEM WORKFLOW
+========================================================================
+
+1. STANDBY STATE
+----------------
+- Node 1 (Station LCD) shows: "VoltCharge EV Charging Station"
+- Node 3 (Car LCD) shows: "Coil Alignment 0%"
+- Buzzer is silent.
+
+2. VEHICLE ARRIVES
+------------------
+- Car arrives at the station. Node 1's IR sensor detects the car.
+- Node 1 (Station LCD) updates to: "Welcome to EV Charging Station"
+- Web GUI Dashboard displays: "Car Present"
+
+3. COIL ALIGNMENT
+-----------------
+- Node 2 measures distance using the ultrasonic sensor.
+- If distance is >= 10 cm: Alignment is 0%.
+- If distance is < 10 cm: Dashboard and Node 3 (Car LCD) display alignment percentage.
+- While aligning (1% to 99%): Node 3's Buzzer beeps intermittently (beep... beep... beep...).
+- If distance is <= 3 cm: Alignment is 100%.
+  - Node 3's LCD shows "Aligned: 100%".
+  - Buzzer triggers a single, continuous 2-second long beep, then turns off.
+
+4. CHARGING ACTION
+------------------
+- User clicks "Start Charging" on the Web Dashboard.
+- Safety check: Dashboard permits charging ONLY if alignment is 100%.
+- If allowed, Dashboard triggers Node 1's Relay to turn ON (active high).
+- During charging:
+  - Dashboard shows and sends telemetry to Node 1's LCD.
+  - Node 1 (Station LCD) displays: 12V voltage, 2A current, battery %, and kWh.
+
+5. STOP & BILLING
+-----------------
+- User clicks "Stop Charging" on the Web Dashboard.
+- Node 1's Relay turns OFF.
+- Dashboard generates a Tax Invoice showing energy consumed, cost, GST (18%), and a payment QR code.
+- Note: A minimum billing of ₹1.00 applies for "System Use" if calculations are less than ₹1.00.
+- User clicks "I Have Paid The Bill" on the GUI to log the session and reset the screens back to standby.
+========================================================================

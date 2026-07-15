@@ -1,0 +1,1377 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VoltCharge | IoT Smart Charging Hub</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap');
+
+        :root {
+            --primary-neon: #00ffcc;
+            --secondary-neon: #7000ff;
+            --dark-bg: #0a0a0c;
+            --card-bg: #16161a;
+        }
+
+        body {
+            font-family: 'Space Grotesk', sans-serif;
+            background-color: var(--dark-bg);
+            color: #ffffff;
+            margin: 0;
+            overflow-x: hidden;
+        }
+
+        .neon-border {
+            border: 1px solid rgba(0, 255, 204, 0.3);
+            box-shadow: 0 0 15px rgba(0, 255, 204, 0.1);
+        }
+
+        .gradient-text {
+            background: linear-gradient(90deg, #00ffcc, #7000ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .charging-wave {
+            background: linear-gradient(0deg, rgba(0, 255, 204, 0.2) 0%, transparent 100%);
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            transition: height 0.5s ease;
+        }
+
+        .nav-item.active {
+            color: var(--primary-neon);
+            border-bottom: 2px solid var(--primary-neon);
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--dark-bg);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #333;
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--primary-neon);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary-neon), #00b38f);
+            color: black;
+            font-weight: bold;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(0, 255, 204, 0.4);
+        }
+
+        .btn-disabled {
+            background: #2a2a30;
+            color: #666;
+            cursor: not-allowed;
+        }
+
+        .status-badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+        }
+
+        .grid-mesh {
+            background-image: radial-gradient(circle, #ffffff05 1px, transparent 1px);
+            background-size: 30px 30px;
+        }
+
+        @keyframes pulse {
+            0% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.4;
+            }
+
+            100% {
+                opacity: 1;
+            }
+        }
+
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+
+        .glow-cyan {
+            text-shadow: 0 0 10px rgba(0, 255, 204, 0.5);
+        }
+    </style>
+</head>
+
+<body class="grid-mesh">
+
+    <!-- Top Navigation Bar -->
+    <nav
+        class="sticky top-0 z-50 bg-[#0a0a0c]/85 backdrop-blur-lg border-b border-white/5 px-6 py-4 flex justify-between items-center">
+        <div class="flex items-center gap-3">
+            <div
+                class="w-9 h-9 bg-gradient-to-br from-[#00ffcc] to-[#7000ff] rounded-xl flex items-center justify-center shadow-lg shadow-cyan-500/20">
+                <i class="fas fa-bolt text-black text-lg"></i>
+            </div>
+            <span class="text-2xl font-bold tracking-tighter">VOLT<span class="text-[#00ffcc]">CHARGE</span></span>
+        </div>
+        <div class="hidden md:flex gap-8">
+            <a href="#" onclick="showPage('home')"
+                class="nav-item active hover:text-[#00ffcc] transition py-2 font-medium">Home</a>
+            <a href="#" onclick="showPage('dashboard')"
+                class="nav-item hover:text-[#00ffcc] transition py-2 font-medium">Dashboard</a>
+            <a href="#" onclick="showPage('history')"
+                class="nav-item hover:text-[#00ffcc] transition py-2 font-medium">Logs</a>
+            <a href="#" onclick="showPage('settings')"
+                class="nav-item hover:text-[#00ffcc] transition py-2 font-medium">Settings</a>
+        </div>
+        <div class="flex items-center gap-4">
+            <!-- Simulation Indicator -->
+            <div class="flex items-center gap-2 bg-white/5 border border-white/10 px-3 py-1.5 rounded-xl">
+                <span class="text-xs text-gray-400">Simulation</span>
+                <button id="sim-mode-toggle" onclick="toggleSimMode()"
+                    class="w-10 h-6 bg-cyan-500 rounded-full p-0.5 transition duration-300 relative">
+                    <div
+                        class="w-5 h-5 bg-black rounded-full shadow-md transform translate-x-4 transition duration-300">
+                    </div>
+                </button>
+            </div>
+            <div class="text-right hidden sm:block">
+                <p class="text-[10px] text-gray-500 uppercase tracking-wider">Wallet Balance</p>
+                <p class="text-sm font-mono text-[#00ffcc] font-bold">₹1,500.00</p>
+            </div>
+            <div class="w-10 h-10 rounded-full border border-[#00ffcc]/20 overflow-hidden bg-gray-800">
+                <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Shrushti" alt="User">
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content Area -->
+    <main class="max-w-7xl mx-auto p-4 md:p-8 min-h-[calc(100vh-80px)] pb-24 md:pb-8">
+
+        <!-- PAGE: HOME -->
+        <div id="page-home" class="page-content space-y-8 animate-fadeIn">
+            <!-- Hero Banner -->
+            <section
+                class="relative rounded-3xl overflow-hidden bg-gradient-to-r from-black via-[#0d0d11] to-[#16161a] p-8 md:p-16 flex flex-col md:flex-row items-center justify-between border border-white/5 shadow-2xl">
+                <div class="absolute -right-20 -top-20 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl"></div>
+                <div class="absolute -left-20 -bottom-20 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl"></div>
+
+                <div class="z-10 space-y-6 md:w-1/2">
+                    <div
+                        class="inline-flex items-center gap-2 bg-white/5 px-4 py-2 rounded-full border border-white/10 text-[#00ffcc] text-xs font-bold uppercase tracking-widest">
+                        <span id="system-status-led" class="w-2 h-2 rounded-full bg-yellow-500 pulse"></span>
+                        <span id="system-status-text">SYSTEM READY</span>
+                    </div>
+                    <h1 class="text-4xl md:text-6xl font-bold leading-tight tracking-tight">Wireless EV<br><span
+                            class="gradient-text">Coil Charging</span></h1>
+                    <p class="text-gray-400 text-lg max-w-md">Align your electric vehicle's induction coil and trigger
+                        high-speed wireless charging directly via Web IoT dashboard controls.</p>
+                    <div class="flex gap-4">
+                        <button onclick="showPage('dashboard')"
+                            class="btn-primary px-8 py-4 rounded-xl flex items-center gap-3 text-sm tracking-wider uppercase font-extrabold transition">
+                            Open Dashboard <i class="fas fa-arrow-right"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="relative mt-8 md:mt-0 z-10">
+                    <div
+                        class="absolute -inset-0.5 bg-gradient-to-r from-[#00ffcc] to-[#7000ff] rounded-full blur opacity-30">
+                    </div>
+                    <div
+                        class="relative w-64 h-64 md:w-72 md:h-72 bg-[#16161a] rounded-full flex items-center justify-center border border-white/10">
+                        <i
+                            class="fas fa-charging-station text-[#00ffcc] text-8xl filter drop-shadow-[0_0_15px_rgba(0,255,204,0.4)]"></i>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Node Status Overview -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <!-- Node 1 -->
+                <div
+                    class="bg-[#16161a] p-6 rounded-2xl border border-white/5 relative overflow-hidden flex flex-col justify-between min-h-[140px]">
+                    <div>
+                        <div class="flex justify-between items-start">
+                            <h3 class="text-gray-400 font-medium text-sm">Node 1 (Station)</h3>
+                            <span id="node1-badge"
+                                class="status-badge bg-yellow-500/10 text-yellow-500 border border-yellow-500/20 font-bold">Unchecked</span>
+                        </div>
+                        <p class="text-xl font-bold mt-2" id="node1-summary">Relay: OFF</p>
+                    </div>
+                    <p class="text-xs text-gray-500 mt-4" id="node1-ip-display">IP: Not Configured</p>
+                </div>
+                <!-- Node 2 -->
+                <div
+                    class="bg-[#16161a] p-6 rounded-2xl border border-white/5 relative overflow-hidden flex flex-col justify-between min-h-[140px]">
+                    <div>
+                        <div class="flex justify-between items-start">
+                            <h3 class="text-gray-400 font-medium text-sm">Node 2 (Robot)</h3>
+                            <span id="node2-badge"
+                                class="status-badge bg-yellow-500/10 text-yellow-500 border border-yellow-500/20 font-bold">Unchecked</span>
+                        </div>
+                        <p class="text-xl font-bold mt-2" id="node2-summary">Distance: 0.0 cm</p>
+                    </div>
+                    <p class="text-xs text-gray-500 mt-4" id="node2-ip-display">IP: Not Configured</p>
+                </div>
+                <!-- Node 3 -->
+                <div
+                    class="bg-[#16161a] p-6 rounded-2xl border border-white/5 relative overflow-hidden flex flex-col justify-between min-h-[140px]">
+                    <div>
+                        <div class="flex justify-between items-start">
+                            <h3 class="text-gray-400 font-medium text-sm">Node 3 (Car)</h3>
+                            <span id="node3-badge"
+                                class="status-badge bg-yellow-500/10 text-yellow-500 border border-yellow-500/20 font-bold">Unchecked</span>
+                        </div>
+                        <p class="text-xl font-bold mt-2" id="node3-summary">Coil Alignment: 0%</p>
+                    </div>
+                    <p class="text-xs text-gray-500 mt-4" id="node3-ip-display">IP: Not Configured</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- PAGE: LIVE DASHBOARD -->
+        <div id="page-dashboard" class="page-content hidden space-y-6">
+
+            <!-- Hardware Simulation Panel (Visible when Sim Mode is active) -->
+            <div id="simulation-panel" class="bg-cyan-950/10 border border-cyan-500/20 p-6 rounded-3xl space-y-4">
+                <div class="flex items-center gap-2 text-cyan-400 font-bold">
+                    <i class="fas fa-gamepad text-lg animate-pulse"></i>
+                    <span>Hardware Simulation Cockpit</span>
+                </div>
+                <p class="text-xs text-gray-400">Since physical nodes might be offline, use these controls to simulate
+                    sensor changes and verify how the LCDs, buzzers, and relays react.</p>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
+                    <div class="space-y-2">
+                        <div class="flex justify-between text-sm">
+                            <span class="text-gray-300">Simulate Node 1: Car Presence (IR Sensor)</span>
+                            <span id="sim-ir-label" class="font-bold text-red-500">NO CAR (IR HIGH)</span>
+                        </div>
+                        <button onclick="toggleSimIR()" id="sim-ir-btn"
+                            class="w-full bg-white/5 border border-white/10 hover:bg-white/10 text-white font-bold py-2.5 rounded-xl text-sm transition">
+                            Arrive Car (Trigger IR LOW)
+                        </button>
+                    </div>
+                    <div class="space-y-2">
+                        <div class="flex justify-between text-sm">
+                            <span class="text-gray-300">Simulate Node 2: Coil Proximity (Ultrasonic)</span>
+                            <span id="sim-distance-label" class="font-bold text-cyan-400">12.0 cm (0% Align)</span>
+                        </div>
+                        <input type="range" id="sim-distance-slider" min="1" max="15" value="12"
+                            oninput="handleSimDistanceSlider(this.value)"
+                            class="w-full h-2 bg-gray-800 rounded-lg appearance-none cursor-pointer accent-[#00ffcc]">
+                        <div class="flex justify-between text-[10px] text-gray-500">
+                            <span>15cm (Unaligned)</span>
+                            <span>10cm (Start Align)</span>
+                            <span>3cm (100% Aligned)</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Display Indicators showing what the LCDs show -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 pt-4 border-t border-white/5">
+                    <div class="bg-black/40 border border-white/5 p-3 rounded-xl">
+                        <p class="text-[10px] text-gray-500 uppercase tracking-wider">Node 1 LCD (Station)</p>
+                        <div
+                            class="font-mono text-emerald-400 bg-black p-2 rounded border border-emerald-500/20 text-center mt-1 text-sm tracking-wide">
+                            <div id="lcd-node1-line1"> VoltCharge EV </div>
+                            <div id="lcd-node1-line2">Charging Station</div>
+                        </div>
+                    </div>
+                    <div class="bg-black/40 border border-white/5 p-3 rounded-xl">
+                        <p class="text-[10px] text-gray-500 uppercase tracking-wider">Node 3 LCD (Car)</p>
+                        <div
+                            class="font-mono text-emerald-400 bg-black p-2 rounded border border-emerald-500/20 text-center mt-1 text-sm tracking-wide">
+                            <div id="lcd-node3-line1">Coil Alignment</div>
+                            <div id="lcd-node3-line2">0% - Aligning...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Dashboard Main Header -->
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div>
+                    <h2 class="text-3xl font-bold">Session Overview <span
+                            class="text-sm font-normal text-gray-500 font-mono">#VC-7732</span></h2>
+                    <p class="text-xs text-gray-400">Coil alignment of 100% is required to initiate charging.</p>
+                </div>
+                <div class="flex gap-3 w-full md:w-auto">
+                    <button onclick="startCharging()" id="btn-start-charge"
+                        class="flex-1 md:flex-none btn-primary px-6 py-3 rounded-xl text-sm font-bold uppercase tracking-wider">
+                        Start Charging
+                    </button>
+                    <button onclick="stopCharging()" id="btn-stop-charge"
+                        class="flex-1 md:flex-none bg-white/5 border border-white/10 hover:bg-white/10 text-white px-6 py-3 rounded-xl text-sm font-bold uppercase tracking-wider hidden">
+                        Stop Charging
+                    </button>
+                    <button onclick="toggleEmergency()" id="emer-btn"
+                        class="bg-red-500/10 border border-red-500/20 text-red-500 px-6 py-3 rounded-xl text-sm font-bold uppercase hover:bg-red-600 hover:text-white transition">
+                        Emergency
+                    </button>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Left Panel: Coil Alignment & Car Arrival -->
+                <div class="lg:col-span-1 space-y-6">
+                    <!-- Coil Alignment widget -->
+                    <div
+                        class="bg-[#16161a] rounded-3xl border border-white/10 p-8 flex flex-col items-center justify-center relative overflow-hidden text-center min-h-[300px]">
+                        <div class="absolute inset-0 bg-gradient-to-b from-transparent to-black/30"></div>
+                        <div class="z-10 space-y-4 w-full">
+                            <p class="text-gray-400 font-bold uppercase text-xs tracking-widest">Coil Alignment</p>
+                            <div class="relative w-40 h-40 mx-auto flex items-center justify-center">
+                                <svg class="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+                                    <circle class="text-white/5" stroke-width="6" stroke="currentColor"
+                                        fill="transparent" r="40" cx="50" cy="50" />
+                                    <circle id="alignment-svg-circle" class="text-[#00ffcc] transition-all duration-300"
+                                        stroke-width="6" stroke-linecap="round" stroke="currentColor" fill="transparent"
+                                        r="40" cx="50" cy="50" stroke-dasharray="251.2" stroke-dashoffset="251.2" />
+                                </svg>
+                                <div class="absolute text-4xl font-black font-mono" id="alignment-percentage-text">0%
+                                </div>
+                            </div>
+                            <div class="text-sm font-bold text-[#00ffcc] uppercase tracking-wider"
+                                id="alignment-status-label">NOT ALIGNED</div>
+                            <div class="text-xs text-gray-400 mt-1">Sensor Distance: <span id="alignment-distance-text"
+                                    class="font-mono text-[#00ffcc] font-bold">-- cm</span></div>
+
+                            <!-- Alignment Alert Badge -->
+                            <div id="alignment-warning-alert"
+                                class="bg-red-500/10 border border-red-500/20 text-red-400 px-4 py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2">
+                                <i class="fas fa-exclamation-circle text-sm"></i>
+                                <span>Coil needs to be aligned to 100%</span>
+                            </div>
+                            <div id="alignment-success-alert"
+                                class="bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 px-4 py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 hidden">
+                                <i class="fas fa-check-circle text-sm"></i>
+                                <span>Coil Aligned! Ready to Charge</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Car Detection widget -->
+                    <div class="bg-[#16161a] p-6 rounded-3xl border border-white/10 flex items-center justify-between">
+                        <div class="flex items-center gap-4">
+                            <div
+                                class="w-12 h-12 rounded-xl bg-purple-500/10 flex items-center justify-center text-purple-500 border border-purple-500/20">
+                                <i class="fas fa-car text-xl"></i>
+                            </div>
+                            <div>
+                                <p class="font-bold">EV Station Presence</p>
+                                <p class="text-xs text-gray-500" id="presence-subtext">Waiting for vehicle...</p>
+                            </div>
+                        </div>
+                        <span id="presence-badge"
+                            class="status-badge bg-red-500/10 text-red-500 border border-red-500/20 font-bold">No
+                            Car</span>
+                    </div>
+                </div>
+
+                <!-- Right Panel: Live Charging Telemetry & Chart -->
+                <div class="lg:col-span-2 space-y-6">
+                    <!-- Live Stats -->
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div class="bg-[#16161a] p-6 rounded-2xl border border-white/10 relative overflow-hidden">
+                            <div id="dash-wave" class="charging-wave" style="height: 0%;"></div>
+                            <div class="relative z-10">
+                                <p class="text-gray-500 text-xs mb-1 uppercase tracking-wider font-semibold">Battery
+                                    State</p>
+                                <p class="text-3xl font-mono font-bold text-white" id="live-percent">45%</p>
+                            </div>
+                        </div>
+                        <div class="bg-[#16161a] p-6 rounded-2xl border border-white/10">
+                            <p class="text-gray-500 text-xs mb-1 uppercase tracking-wider font-semibold">Voltage</p>
+                            <p class="text-3xl font-mono font-bold text-[#00ffcc]" id="live-v">12.0 V</p>
+                        </div>
+                        <div class="bg-[#16161a] p-6 rounded-2xl border border-white/10">
+                            <p class="text-gray-500 text-xs mb-1 uppercase tracking-wider font-semibold">Current</p>
+                            <p class="text-3xl font-mono font-bold text-[#00ffcc]" id="live-a">2.0 A</p>
+                        </div>
+                        <div class="bg-[#16161a] p-6 rounded-2xl border border-white/10">
+                            <p class="text-gray-500 text-xs mb-1 uppercase tracking-wider font-semibold">Energy</p>
+                            <p class="text-3xl font-mono font-bold text-[#00ffcc]" id="live-kwh">0.0000 kWh</p>
+                        </div>
+                    </div>
+
+                    <!-- Chart Widget -->
+                    <div class="bg-[#16161a] p-6 rounded-3xl border border-white/10">
+                        <div class="flex justify-between items-center mb-6">
+                            <div>
+                                <h3 class="font-bold">Real-time Charging Profile</h3>
+                                <p class="text-xs text-gray-500">Power Delivery Rate (Watts)</p>
+                            </div>
+                            <div class="flex gap-4 text-xs font-mono">
+                                <span class="flex items-center gap-1.5 text-[#00ffcc]"><span
+                                        class="w-2.5 h-2.5 rounded-full bg-[#00ffcc]"></span> P = V * I (24W)</span>
+                            </div>
+                        </div>
+                        <canvas id="chargingChart" height="120"></canvas>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- PAGE: BILLING & CHECKOUT -->
+        <div id="page-billing" class="page-content hidden max-w-lg mx-auto py-6 animate-scaleUp">
+            <div id="bill-container"
+                class="bg-white text-black p-8 md:p-10 rounded-3xl shadow-2xl relative border border-gray-200">
+                <div class="absolute top-0 right-0 w-24 h-24 bg-[#00ffcc]/10 rounded-bl-full pointer-events-none"></div>
+
+                <!-- Bill Header -->
+                <div class="flex justify-between items-start mb-8">
+                    <div>
+                        <h2 class="text-2xl font-black uppercase italic tracking-tighter text-gray-800">TAX INVOICE</h2>
+                        <p class="text-xs text-gray-500 font-mono">INV: #VC-9928-SIM</p>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-lg font-bold tracking-tight text-purple-800">VoltCharge</div>
+                        <p class="text-[9px] text-gray-500 uppercase tracking-wider">Smart EV Ecosystem</p>
+                    </div>
+                </div>
+
+                <!-- Invoice Details -->
+                <div class="space-y-4 mb-8">
+                    <div class="flex justify-between border-b border-gray-150 pb-2.5 text-sm">
+                        <span class="text-gray-500">Energy Consumed</span>
+                        <span class="font-bold font-mono text-gray-800" id="bill-energy">0.0000 kWh</span>
+                    </div>
+                    <div class="flex justify-between border-b border-gray-150 pb-2.5 text-sm">
+                        <span class="text-gray-500">Standard Rate</span>
+                        <span class="font-bold font-mono text-gray-800">₹12.50 / kWh</span>
+                    </div>
+                    <div class="flex justify-between border-b border-gray-150 pb-2.5 text-sm">
+                        <span class="text-gray-500">Subtotal</span>
+                        <span class="font-bold font-mono text-gray-800" id="bill-subtotal">₹0.00</span>
+                    </div>
+                    <div class="flex justify-between border-b border-gray-150 pb-2.5 text-sm">
+                        <span class="text-gray-500">GST (18%)</span>
+                        <span class="font-bold font-mono text-gray-800" id="bill-tax">₹0.00</span>
+                    </div>
+                    <div class="flex justify-between pt-4">
+                        <span class="text-base font-bold text-gray-800">Total Payable</span>
+                        <span class="text-2xl font-black text-gray-900 font-mono" id="bill-total">₹0.00</span>
+                    </div>
+                    <div class="text-[10px] text-gray-400 text-right mt-1.5 italic">
+                        *Note: Minimum billing of ₹1.00 applies for system use.
+                    </div>
+                </div>
+
+                <!-- Footer QR and Simulator Checkout -->
+                <div class="text-center space-y-6">
+                    <div class="p-4 bg-gray-50 rounded-2xl border border-gray-100">
+                        <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-3">SCAN TO PAY</p>
+                        <!-- Premium SVG QR Code -->
+                        <div
+                            class="w-36 h-36 mx-auto bg-white border border-gray-200 p-2 rounded-xl flex items-center justify-center relative shadow-sm">
+                            <i class="fas fa-qrcode text-6xl text-gray-800"></i>
+                            <div
+                                class="absolute inset-0 flex items-center justify-center opacity-5 hover:opacity-100 transition duration-300 bg-white/95 rounded-xl cursor-default">
+                                <span class="text-[9px] font-bold text-gray-600 uppercase tracking-widest">Mock UPI
+                                    QR</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex flex-col gap-3">
+                        <button onclick="payBill()"
+                            class="w-full bg-[#10b981] hover:bg-[#059669] text-white py-4 rounded-xl font-bold text-sm tracking-wider uppercase transition shadow-lg shadow-emerald-500/20">
+                            I Have Paid The Bill (Simulate Payment)
+                        </button>
+                        <button onclick="window.print()"
+                            class="w-full bg-gray-900 hover:bg-black text-white py-3 rounded-xl font-bold text-sm transition">
+                            <i class="fas fa-print mr-2"></i> Print Receipt
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- PAGE: HISTORY LOGS -->
+        <div id="page-history" class="page-content hidden space-y-6">
+            <div class="flex justify-between items-center">
+                <h2 class="text-3xl font-bold">Charging Session Logs</h2>
+                <button onclick="clearHistory()"
+                    class="text-red-400 border border-red-400/20 hover:bg-red-500/10 px-4 py-2 rounded-xl text-xs font-bold transition">
+                    Clear Logs
+                </button>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left bg-[#16161a] rounded-2xl overflow-hidden border border-white/5">
+                    <thead class="bg-white/5 text-gray-400 text-xs uppercase font-bold">
+                        <tr>
+                            <th class="p-6">Date & Time</th>
+                            <th class="p-6">Session ID</th>
+                            <th class="p-6">Energy Consumed</th>
+                            <th class="p-6">Billing Amount</th>
+                            <th class="p-6">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="history-table-body" class="divide-y divide-white/5 font-mono text-sm">
+                        <!-- Dynamic content -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- PAGE: SETTINGS -->
+        <div id="page-settings" class="page-content hidden max-w-2xl mx-auto py-6">
+            <div class="bg-[#16161a] rounded-3xl border border-white/10 overflow-hidden shadow-2xl">
+                <div
+                    class="p-8 border-b border-white/5 flex justify-between items-center bg-gradient-to-r from-transparent to-white/5">
+                    <div>
+                        <h2 class="text-2xl font-bold">IoT ESP32 Node Settings</h2>
+                        <p class="text-gray-500 text-sm">Configure communication details for the 3 active nodes</p>
+                    </div>
+                    <i
+                        class="fas fa-wifi text-[#00ffcc] text-2xl filter drop-shadow-[0_0_10px_rgba(0,255,204,0.3)]"></i>
+                </div>
+                <div class="p-8 space-y-6">
+                    <div
+                        class="bg-cyan-500/10 border border-cyan-500/20 p-4 rounded-xl text-sm text-cyan-400 flex items-start gap-3">
+                        <i class="fas fa-info-circle text-base mt-0.5"></i>
+                        <span>Configure the IP addresses assigned by your router (SSID: <strong>Air</strong>). CORS is
+                            fully supported by the ESP32 firmware endpoints.</span>
+                    </div>
+
+                    <div class="space-y-4">
+                        <!-- Node 1 Setup -->
+                        <div class="space-y-2">
+                            <label class="block text-sm text-gray-300 font-medium">Node 1 (Station) IP Address</label>
+                            <div class="flex gap-3">
+                                <input type="text" id="node1-ip" placeholder="e.g., 192.168.1.100"
+                                    class="flex-1 bg-black border border-white/10 rounded-xl px-4 py-3 outline-none focus:border-[#00ffcc] text-sm font-mono transition">
+                                <button onclick="testConnection('node1')"
+                                    class="bg-white/5 px-4 py-3 rounded-xl border border-white/10 hover:bg-white/10 text-xs font-bold uppercase transition">
+                                    Test
+                                </button>
+                            </div>
+                            <div class="flex justify-between text-xs px-1">
+                                <span class="text-gray-500">Responsible for: IR detection, relay lock, LCD.</span>
+                                <span id="node1-status" class="text-yellow-500 font-bold">Not Checked</span>
+                            </div>
+                        </div>
+
+                        <!-- Node 2 Setup -->
+                        <div class="space-y-2">
+                            <label class="block text-sm text-gray-300 font-medium">Node 2 (Robot) IP Address</label>
+                            <div class="flex gap-3">
+                                <input type="text" id="node2-ip" placeholder="e.g., 192.168.1.101"
+                                    class="flex-1 bg-black border border-white/10 rounded-xl px-4 py-3 outline-none focus:border-[#00ffcc] text-sm font-mono transition">
+                                <button onclick="testConnection('node2')"
+                                    class="bg-white/5 px-4 py-3 rounded-xl border border-white/10 hover:bg-white/10 text-xs font-bold uppercase transition">
+                                    Test
+                                </button>
+                            </div>
+                            <div class="flex justify-between text-xs px-1">
+                                <span class="text-gray-500">Responsible for: Ultrasonic distance telemetry.</span>
+                                <span id="node2-status" class="text-yellow-500 font-bold">Not Checked</span>
+                            </div>
+                        </div>
+
+                        <!-- Node 3 Setup -->
+                        <div class="space-y-2">
+                            <label class="block text-sm text-gray-300 font-medium">Node 3 (Car) IP Address</label>
+                            <div class="flex gap-3">
+                                <input type="text" id="node3-ip" placeholder="e.g., 192.168.1.102"
+                                    class="flex-1 bg-black border border-white/10 rounded-xl px-4 py-3 outline-none focus:border-[#00ffcc] text-sm font-mono transition">
+                                <button onclick="testConnection('node3')"
+                                    class="bg-white/5 px-4 py-3 rounded-xl border border-white/10 hover:bg-white/10 text-xs font-bold uppercase transition">
+                                    Test
+                                </button>
+                            </div>
+                            <div class="flex justify-between text-xs px-1">
+                                <span class="text-gray-500">Responsible for: Coil alignment LCD & Buzzer alerts.</span>
+                                <span id="node3-status" class="text-yellow-500 font-bold">Not Checked</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="pt-4 flex gap-4">
+                        <button onclick="saveSettings()"
+                            class="flex-1 btn-primary py-4 rounded-xl text-sm font-bold uppercase tracking-wider">
+                            Save IPs & Update Dashboard
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Bottom Navigation Bar for Mobile -->
+    <div
+        class="md:hidden fixed bottom-0 left-0 w-full bg-[#0a0a0c]/90 backdrop-blur-xl border-t border-white/5 grid grid-cols-4 py-3 z-50">
+        <button onclick="showPage('home')" class="flex flex-col items-center gap-1 text-gray-400 active-mobile-nav">
+            <i class="fas fa-home"></i><span class="text-[9px]">Home</span>
+        </button>
+        <button onclick="showPage('dashboard')" class="flex flex-col items-center gap-1 text-gray-400">
+            <i class="fas fa-desktop"></i><span class="text-[9px]">Dashboard</span>
+        </button>
+        <button onclick="showPage('history')" class="flex flex-col items-center gap-1 text-gray-400">
+            <i class="fas fa-receipt"></i><span class="text-[9px]">Logs</span>
+        </button>
+        <button onclick="showPage('settings')" class="flex flex-col items-center gap-1 text-gray-400">
+            <i class="fas fa-cog"></i><span class="text-[9px]">Settings</span>
+        </button>
+    </div>
+
+    <!-- Script Block -->
+    <script>
+        // State variables
+        let chargingActive = false;
+        let batteryLevel = 45; // Baseline EV charge
+        let energyConsumed = 0.0000;
+        let alignmentPercentage = 0;
+        let currentDistanceValue = 0.0;
+        let carPresent = false;
+        let connectionPollingInterval = null;
+        let telemetryInterval = null;
+        let chartInstance = null;
+
+        // Simulation settings
+        let simulationMode = true; // Enabled by default for easy demo/testing
+        let simCarPresent = false;
+        let simDistance = 12.0;
+
+        // Buzzer tracking for simulation UI description
+        let simBuzzerState = "Silent";
+
+        // IP inputs from localStorage
+        let node1Ip = localStorage.getItem('node1Ip') || '';
+        let node2Ip = localStorage.getItem('node2Ip') || '';
+        let node3Ip = localStorage.getItem('node3Ip') || '';
+
+        // UI Toast Helper
+        function showToast(type, message) {
+            let container = document.getElementById('toast-container');
+            if (!container) {
+                container = document.createElement('div');
+                container.id = 'toast-container';
+                container.className = 'fixed bottom-24 right-6 z-[100] flex flex-col gap-3 max-w-sm';
+                document.body.appendChild(container);
+            }
+
+            const toast = document.createElement('div');
+            const bgClass = type === 'success' ? 'bg-emerald-600 border-emerald-500' :
+                type === 'error' ? 'bg-red-600 border-red-500' : 'bg-blue-600 border-blue-500';
+            const iconClass = type === 'success' ? 'fa-check-circle' :
+                type === 'error' ? 'fa-exclamation-triangle' : 'fa-info-circle';
+
+            toast.className = `${bgClass} text-white px-5 py-4 rounded-2xl shadow-2xl flex items-center gap-3 transform translate-y-10 opacity-0 transition duration-300 ease-out border`;
+            toast.innerHTML = `
+                <i class="fas ${iconClass} text-lg"></i>
+                <div class="flex-1 text-sm font-semibold">${message}</div>
+            `;
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.classList.remove('translate-y-10', 'opacity-0');
+            }, 50);
+
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'translate-y-2');
+                setTimeout(() => toast.remove(), 300);
+            }, 4000);
+        }
+
+        // Toggle Simulation Mode
+        function toggleSimMode() {
+            simulationMode = !simulationMode;
+            const toggle = document.getElementById('sim-mode-toggle');
+            const knob = toggle.querySelector('div');
+            const simPanel = document.getElementById('simulation-panel');
+
+            if (simulationMode) {
+                toggle.classList.remove('bg-gray-700');
+                toggle.classList.add('bg-cyan-500');
+                knob.classList.add('translate-x-4');
+                simPanel.classList.remove('hidden');
+                showToast('info', 'Simulation Mode Engaged. Hardware inputs bypassed.');
+            } else {
+                toggle.classList.add('bg-gray-700');
+                toggle.classList.remove('bg-cyan-500');
+                knob.classList.remove('translate-x-4');
+                simPanel.classList.add('hidden');
+                showToast('info', 'Live Hardware Mode. Querying physical Node IPs.');
+            }
+            updateConnectionBadges();
+            runCoordinationCycle();
+        }
+
+        // Toggle Simulation IR Status
+        function toggleSimIR() {
+            simCarPresent = !simCarPresent;
+            const label = document.getElementById('sim-ir-label');
+            const btn = document.getElementById('sim-ir-btn');
+
+            if (simCarPresent) {
+                label.innerText = "CAR PRESENT (IR LOW)";
+                label.className = "font-bold text-emerald-400";
+                btn.innerText = "Depart Car (Trigger IR HIGH)";
+                btn.classList.add('bg-purple-600/10', 'border-purple-500/30', 'text-purple-400');
+                showToast('success', 'Simulation: Car entered station, IR sensor tripped LOW.');
+            } else {
+                label.innerText = "NO CAR (IR HIGH)";
+                label.className = "font-bold text-red-500";
+                btn.innerText = "Arrive Car (Trigger IR LOW)";
+                btn.classList.remove('bg-purple-600/10', 'border-purple-500/30', 'text-purple-400');
+                showToast('info', 'Simulation: Car left station, IR sensor reset HIGH.');
+
+                // If car leaves during charging, auto-stop
+                if (chargingActive) {
+                    stopCharging();
+                }
+            }
+            runCoordinationCycle();
+        }
+
+        // Handle Simulation Distance Slider Change
+        function handleSimDistanceSlider(val) {
+            simDistance = parseFloat(val);
+            const label = document.getElementById('sim-distance-label');
+
+            // Calculate alignment pct
+            let pct = 0;
+            if (simDistance >= 10.0) {
+                pct = 0;
+            } else if (simDistance <= 3.0) {
+                pct = 100;
+            } else {
+                pct = Math.round(((10.0 - simDistance) / 7.0) * 100.0);
+            }
+
+            label.innerText = `${simDistance.toFixed(1)} cm (${pct}% Align)`;
+            runCoordinationCycle();
+        }
+
+        // Setup Page Navigation
+        function showPage(pageId) {
+            document.querySelectorAll('.page-content').forEach(p => p.classList.add('hidden'));
+            document.getElementById(`page-${pageId}`).classList.remove('hidden');
+
+            // Desktop nav items active sync
+            document.querySelectorAll('.nav-item').forEach(link => {
+                if (link.getAttribute('onclick')?.includes(pageId)) {
+                    link.classList.add('active');
+                } else {
+                    link.classList.remove('active');
+                }
+            });
+
+            // Mobile nav items active sync
+            const mobileBtns = document.querySelectorAll('.md\\:hidden button');
+            const pageIndices = { 'home': 0, 'dashboard': 1, 'history': 2, 'settings': 3 };
+            mobileBtns.forEach((btn, idx) => {
+                if (idx === pageIndices[pageId]) {
+                    btn.classList.add('text-[#00ffcc]');
+                    btn.classList.remove('text-gray-400');
+                } else {
+                    btn.classList.remove('text-[#00ffcc]');
+                    btn.classList.add('text-gray-400');
+                }
+            });
+
+            // Init chart if showing dashboard
+            if (pageId === 'dashboard') {
+                initChart();
+            }
+        }
+
+        // Load configured IP addresses
+        function loadSettings() {
+            document.getElementById('node1-ip').value = node1Ip;
+            document.getElementById('node2-ip').value = node2Ip;
+            document.getElementById('node3-ip').value = node3Ip;
+
+            updateConnectionBadges();
+        }
+
+        // Save IP settings
+        function saveSettings() {
+            let n1 = document.getElementById('node1-ip').value.trim();
+            let n2 = document.getElementById('node2-ip').value.trim();
+            let n3 = document.getElementById('node3-ip').value.trim();
+
+            // Helper to prefix http://
+            const formatIp = (ip) => {
+                if (ip && !ip.startsWith('http://') && !ip.startsWith('https://')) {
+                    return 'http://' + ip;
+                }
+                return ip;
+            };
+
+            node1Ip = formatIp(n1);
+            node2Ip = formatIp(n2);
+            node3Ip = formatIp(n3);
+
+            localStorage.setItem('node1Ip', node1Ip);
+            localStorage.setItem('node2Ip', node2Ip);
+            localStorage.setItem('node3Ip', node3Ip);
+
+            showToast('success', 'IP Settings saved successfully.');
+            updateConnectionBadges();
+            showPage('home');
+        }
+
+        // Update indicators on connection status
+        function updateConnectionBadges() {
+            const updateLabel = (id, badgeId, ip, statusText, color) => {
+                const el = document.getElementById(id);
+                const badge = document.getElementById(badgeId);
+                const overviewDisplay = document.getElementById(`${id}-display`);
+
+                if (overviewDisplay) {
+                    overviewDisplay.innerText = ip ? `IP: ${ip}` : 'IP: Not Configured';
+                }
+
+                if (simulationMode) {
+                    el.innerText = "Simulated Mode";
+                    el.className = "text-xs font-bold text-cyan-400";
+                    badge.innerText = "Simulated";
+                    badge.className = "status-badge bg-cyan-500/10 text-cyan-500 border border-cyan-500/20 font-bold";
+                } else {
+                    if (!ip) {
+                        el.innerText = "Not Configured";
+                        el.className = "text-xs font-bold text-yellow-500";
+                        badge.innerText = "Config Required";
+                        badge.className = "status-badge bg-yellow-500/10 text-yellow-500 border border-yellow-500/20 font-bold";
+                    } else {
+                        el.innerText = statusText;
+                        el.className = `text-xs font-bold text-${color}-500`;
+                        badge.innerText = statusText.toUpperCase();
+                        badge.className = `status-badge bg-${color}-500/10 text-${color}-500 border border-${color}-500/20 font-bold`;
+                    }
+                }
+            };
+
+            if (simulationMode) {
+                updateLabel('node1-status', 'node1-badge', node1Ip, 'Simulated', 'cyan');
+                updateLabel('node2-status', 'node2-badge', node2Ip, 'Simulated', 'cyan');
+                updateLabel('node3-status', 'node3-badge', node3Ip, 'Simulated', 'cyan');
+
+                document.getElementById('system-status-led').className = "w-2 h-2 rounded-full bg-cyan-400 pulse";
+                document.getElementById('system-status-text').innerText = "SIMULATOR ACTIVE";
+            } else {
+                // Read states from live status check
+                // Badge labels will update on poll cycles
+            }
+        }
+
+        // Test connection endpoint helper
+        function testConnection(node) {
+            let ip = "";
+            if (node === 'node1') ip = node1Ip;
+            if (node === 'node2') ip = node2Ip;
+            if (node === 'node3') ip = node3Ip;
+
+            const label = document.getElementById(`${node}-status`);
+
+            if (!ip) {
+                showToast('error', 'Configure the IP address first.');
+                return;
+            }
+
+            label.innerText = "Testing...";
+            label.className = "text-xs font-bold text-yellow-500";
+
+            fetch(`${ip}/status`)
+                .then(res => {
+                    if (!res.ok) throw new Error();
+                    return res.json();
+                })
+                .then(data => {
+                    label.innerText = "Online";
+                    label.className = "text-xs font-bold text-green-500";
+                    showToast('success', `${node.toUpperCase()} is online!`);
+                    updateConnectionBadges();
+                })
+                .catch(err => {
+                    label.innerText = "Offline";
+                    label.className = "text-xs font-bold text-red-500";
+                    showToast('error', `Could not connect to ${node.toUpperCase()} at ${ip}. Check WiFi/CORS.`);
+                    updateConnectionBadges();
+                });
+        }
+
+        // Main Coordination Polling Loop
+        function startHardwarePolling() {
+            if (connectionPollingInterval) clearInterval(connectionPollingInterval);
+
+            connectionPollingInterval = setInterval(() => {
+                runCoordinationCycle();
+            }, 1000);
+        }
+
+        function runCoordinationCycle() {
+            if (simulationMode) {
+                // --- SIMULATION COORDINATION ---
+                carPresent = simCarPresent;
+                currentDistanceValue = simDistance;
+
+                // Alignment percentage logic
+                if (currentDistanceValue >= 10.0) {
+                    alignmentPercentage = 0;
+                } else if (currentDistanceValue <= 3.0) {
+                    alignmentPercentage = 100;
+                } else {
+                    alignmentPercentage = Math.round(((10.0 - currentDistanceValue) / 7.0) * 100.0);
+                }
+
+                // Node 2 Overview Summary
+                document.getElementById('node2-summary').innerText = `Distance: ${currentDistanceValue.toFixed(1)} cm`;
+                document.getElementById('node3-summary').innerText = `Coil Alignment: ${alignmentPercentage}%`;
+
+                // Sync LCD Node 3
+                const lcdN3L1 = document.getElementById('lcd-node3-line1');
+                const lcdN3L2 = document.getElementById('lcd-node3-line2');
+                lcdN3L1.innerText = "Coil Alignment";
+                if (alignmentPercentage === 0) {
+                    lcdN3L2.innerText = "0% - Aligning...";
+                    simBuzzerState = "Silent";
+                } else if (alignmentPercentage === 100) {
+                    lcdN3L2.innerText = "Aligned: 100%";
+                    simBuzzerState = "2s Long Alert (Muted)";
+                } else {
+                    lcdN3L2.innerText = `Aligning: ${alignmentPercentage}%`;
+                    simBuzzerState = "Beeping Intermittent";
+                }
+
+                // Sync LCD Node 1 (Station)
+                const lcdN1L1 = document.getElementById('lcd-node1-line1');
+                const lcdN1L2 = document.getElementById('lcd-node1-line2');
+
+                if (chargingActive) {
+                    document.getElementById('node1-summary').innerText = "Relay: ON (Charging)";
+                    lcdN1L1.innerText = `12V 2.0A   ${Math.floor(batteryLevel)}%`;
+                    lcdN1L2.innerText = `${energyConsumed.toFixed(4)} kWh`;
+                } else {
+                    document.getElementById('node1-summary').innerText = "Relay: OFF";
+                    if (carPresent) {
+                        lcdN1L1.innerText = " Welcome to EV  ";
+                        lcdN1L2.innerText = "Charging Station";
+                    } else {
+                        lcdN1L1.innerText = "  VoltCharge EV ";
+                        lcdN1L2.innerText = "Charging Station";
+                    }
+                }
+
+                updateDashboardUI();
+            }
+            else {
+                // --- HARDWARE CLIENT REAL TIME COORDINATION ---
+                // 1. Check Node 1 Status (Station)
+                if (node1Ip) {
+                    fetch(`${node1Ip}/status`)
+                        .then(res => res.json())
+                        .then(data => {
+                            document.getElementById('node1-status').innerText = "Online";
+                            document.getElementById('node1-status').className = "text-xs font-bold text-green-500";
+
+                            carPresent = data.car_present;
+                            let relay = data.relay_state;
+                            document.getElementById('node1-summary').innerText = `Relay: ${relay ? 'ON' : 'OFF'}`;
+                        })
+                        .catch(() => {
+                            document.getElementById('node1-status').innerText = "Offline";
+                            document.getElementById('node1-status').className = "text-xs font-bold text-red-500";
+                        });
+                }
+
+                // 2. Check Node 2 Status (Robot)
+                if (node2Ip) {
+                    fetch(`${node2Ip}/status`)
+                        .then(res => res.json())
+                        .then(data => {
+                            document.getElementById('node2-status').innerText = "Online";
+                            document.getElementById('node2-status').className = "text-xs font-bold text-green-500";
+
+                            currentDistanceValue = data.distance;
+                            alignmentPercentage = data.alignment_pct;
+
+                            document.getElementById('node2-summary').innerText = `Distance: ${currentDistanceValue.toFixed(1)} cm`;
+
+                            // Push the alignment value to Node 3 to drive hardware buzzer & LCD
+                            if (node3Ip) {
+                                fetch(`${node3Ip}/update?percent=${alignmentPercentage}`)
+                                    .then(res => res.json())
+                                    .then(dataNode3 => {
+                                        document.getElementById('node3-status').innerText = "Online";
+                                        document.getElementById('node3-status').className = "text-xs font-bold text-green-500";
+                                        document.getElementById('node3-summary').innerText = `Coil Alignment: ${alignmentPercentage}%`;
+                                    })
+                                    .catch(() => {
+                                        document.getElementById('node3-status').innerText = "Offline";
+                                        document.getElementById('node3-status').className = "text-xs font-bold text-red-500";
+                                    });
+                            }
+                        })
+                        .catch(() => {
+                            document.getElementById('node2-status').innerText = "Offline";
+                            document.getElementById('node2-status').className = "text-xs font-bold text-red-500";
+                        });
+                }
+
+                // If not Node 2, but Node 3 exists directly (e.g. for testing)
+                if (!node2Ip && node3Ip) {
+                    fetch(`${node3Ip}/status`)
+                        .then(res => res.json())
+                        .then(() => {
+                            document.getElementById('node3-status').innerText = "Online";
+                            document.getElementById('node3-status').className = "text-xs font-bold text-green-500";
+                        })
+                        .catch(() => {
+                            document.getElementById('node3-status').innerText = "Offline";
+                            document.getElementById('node3-status').className = "text-xs font-bold text-red-500";
+                        });
+                }
+
+                // Global Status Sync
+                syncSystemStatusHeader();
+                updateDashboardUI();
+            }
+        }
+
+        // Header Led Indicator Sync
+        function syncSystemStatusHeader() {
+            const led = document.getElementById('system-status-led');
+            const txt = document.getElementById('system-status-text');
+
+            const n1 = document.getElementById('node1-status').innerText;
+            const n2 = document.getElementById('node2-status').innerText;
+            const n3 = document.getElementById('node3-status').innerText;
+
+            if (n1 === 'Online' && n2 === 'Online' && n3 === 'Online') {
+                led.className = "w-2 h-2 rounded-full bg-green-500 pulse";
+                txt.innerText = "ALL SYSTEMS ONLINE";
+            } else if (n1 === 'Offline' || n2 === 'Offline' || n3 === 'Offline') {
+                led.className = "w-2 h-2 rounded-full bg-red-500 pulse";
+                txt.innerText = "HARDWARE DISCONNECTED";
+            } else {
+                led.className = "w-2 h-2 rounded-full bg-yellow-500 pulse";
+                txt.innerText = "CONNECTING NODES";
+            }
+        }
+
+        // Update dashboard values visually
+        function updateDashboardUI() {
+            // Update Alignment meter values
+            document.getElementById('alignment-percentage-text').innerText = `${alignmentPercentage}%`;
+            document.getElementById('alignment-distance-text').innerText = `${currentDistanceValue.toFixed(1)} cm`;
+
+            // Adjust SVG Circle indicator
+            const circle = document.getElementById('alignment-svg-circle');
+            const circumference = 2 * Math.PI * 40; // 251.2
+            const offset = circumference - (alignmentPercentage / 100) * circumference;
+            circle.style.strokeDashoffset = offset;
+
+            // Alignment Status text
+            const alignLabel = document.getElementById('alignment-status-label');
+            const warningAlert = document.getElementById('alignment-warning-alert');
+            const successAlert = document.getElementById('alignment-success-alert');
+
+            if (alignmentPercentage === 100) {
+                alignLabel.innerText = "FULLY ALIGNED";
+                alignLabel.className = "text-emerald-400 font-bold tracking-wider";
+                warningAlert.classList.add('hidden');
+                successAlert.classList.remove('hidden');
+            } else if (alignmentPercentage > 0) {
+                alignLabel.innerText = "ALIGNING COILS...";
+                alignLabel.className = "text-yellow-500 font-bold tracking-wider";
+                warningAlert.classList.remove('hidden');
+                successAlert.classList.add('hidden');
+            } else {
+                alignLabel.innerText = "NOT ALIGNED";
+                alignLabel.className = "text-[#00ffcc] font-bold tracking-wider";
+                warningAlert.classList.remove('hidden');
+                successAlert.classList.add('hidden');
+            }
+
+            // Sync Car Presence badge
+            const presenceBadge = document.getElementById('presence-badge');
+            const presenceSub = document.getElementById('presence-subtext');
+            if (carPresent) {
+                presenceBadge.innerText = "Car Present";
+                presenceBadge.className = "status-badge bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 font-bold";
+                presenceSub.innerText = "Vehicle docked at charger.";
+            } else {
+                presenceBadge.innerText = "No Car";
+                presenceBadge.className = "status-badge bg-red-500/10 text-red-500 border border-red-500/20 font-bold";
+                presenceSub.innerText = "Waiting for vehicle...";
+            }
+        }
+
+        // Start session logic
+        function startCharging() {
+            // Safety Alignment Validation
+            if (alignmentPercentage < 100) {
+                showToast('error', 'Charging safety lockout: Coil alignment must be 100% to proceed.');
+                return;
+            }
+
+            if (!simulationMode && !node1Ip) {
+                showToast('error', 'Node 1 (Station) IP address is required in Settings.');
+                showPage('settings');
+                return;
+            }
+
+            // Commands to hardware
+            if (!simulationMode) {
+                // Command Node 1 Station to engage Relay
+                fetch(`${node1Ip}/relay/on`)
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.status === 'success') {
+                            engageChargeState();
+                        } else {
+                            showToast('error', 'Relay activation command rejected.');
+                        }
+                    })
+                    .catch(() => {
+                        showToast('error', 'Failed to reach Node 1 (Station) relay hardware.');
+                    });
+            } else {
+                engageChargeState();
+            }
+        }
+
+        function engageChargeState() {
+            chargingActive = true;
+            energyConsumed = 0.0000;
+            batteryLevel = 45; // Start baseline
+
+            // Adjust buttons visibility
+            document.getElementById('btn-start-charge').classList.add('hidden');
+            document.getElementById('btn-stop-charge').classList.remove('hidden');
+
+            // Live Stats UI Initial
+            document.getElementById('live-v').innerText = "12.0 V";
+            document.getElementById('live-a').innerText = "2.0 A";
+            document.getElementById('live-percent').innerText = `${batteryLevel}%`;
+            document.getElementById('dash-wave').style.height = `${batteryLevel}%`;
+
+            showToast('success', 'Power delivery active. Relay enabled.');
+
+            // Chart instantiation
+            initChart();
+
+            // Telemetry Simulator Loop (Updates values, sends parameter details to Node 1 screen)
+            if (telemetryInterval) clearInterval(telemetryInterval);
+            telemetryInterval = setInterval(() => {
+                if (batteryLevel < 100) {
+                    batteryLevel += 0.25; // increments by 1% every 4 seconds
+
+                    // Simulate minor power grid fluctuations
+                    const voltage = (12.0 + (Math.random() - 0.5) * 0.05).toFixed(1);
+                    const current = (2.0 + (Math.random() - 0.5) * 0.02).toFixed(2);
+                    const power = parseFloat(voltage) * parseFloat(current);
+
+                    // Accumulate Energy: 24 Watts = 0.024 kW. Per second = 0.024 / 3600 kWh
+                    energyConsumed += (power / 1000.0) / 3600.0;
+
+                    // Update UI elements
+                    document.getElementById('live-v').innerText = `${voltage} V`;
+                    document.getElementById('live-a').innerText = `${current} A`;
+                    document.getElementById('live-percent').innerText = `${Math.floor(batteryLevel)}%`;
+                    document.getElementById('live-kwh').innerText = `${energyConsumed.toFixed(4)} kWh`;
+                    document.getElementById('dash-wave').style.height = `${batteryLevel}%`;
+
+                    // Push values to Node 1 display if in hardware mode
+                    if (!simulationMode && node1Ip) {
+                        fetch(`${node1Ip}/update?v=${voltage}&c=${current}&bat=${Math.floor(batteryLevel)}&kwh=${energyConsumed.toFixed(4)}`)
+                            .catch(err => console.log('Display update poll error:', err));
+                    }
+
+                    // Feed values to Chart
+                    if (chartInstance) {
+                        chartInstance.data.datasets[0].data.push(power);
+                        chartInstance.data.labels.push("");
+                        if (chartInstance.data.datasets[0].data.length > 20) {
+                            chartInstance.data.datasets[0].data.shift();
+                            chartInstance.data.labels.shift();
+                        }
+                        chartInstance.update('none');
+                    }
+                } else {
+                    // Battery 100% full
+                    stopCharging();
+                }
+            }, 1000);
+        }
+
+        // Stop session logic
+        function stopCharging() {
+            chargingActive = false;
+            if (telemetryInterval) clearInterval(telemetryInterval);
+
+            // Command hardware OFF
+            if (!simulationMode) {
+                if (node1Ip) {
+                    fetch(`${node1Ip}/relay/off`).catch(err => console.log(err));
+                }
+            }
+
+            // Calculations for invoice
+            const rate = 12.50;
+            let subtotal = energyConsumed * rate;
+            let tax = subtotal * 0.18;
+            let total = subtotal + tax;
+
+            // Enforce minimum ₹1.00 system use fee
+            if (total < 1.00) {
+                total = 1.00;
+                subtotal = 0.85;
+                tax = 0.15;
+            }
+
+            // Assign values to invoice page
+            document.getElementById('bill-energy').innerText = `${energyConsumed.toFixed(5)} kWh`;
+            document.getElementById('bill-subtotal').innerText = `₹${subtotal.toFixed(2)}`;
+            document.getElementById('bill-tax').innerText = `₹${tax.toFixed(2)}`;
+            document.getElementById('bill-total').innerText = `₹${total.toFixed(2)}`;
+
+            // Reset dashboard buttons
+            document.getElementById('btn-start-charge').classList.remove('hidden');
+            document.getElementById('btn-stop-charge').classList.add('hidden');
+            document.getElementById('dash-wave').style.height = `0%`;
+
+            showToast('info', 'Charging session completed. Invoice generated.');
+            showPage('billing');
+        }
+
+        // Emergency Engaged
+        function toggleEmergency() {
+            chargingActive = false;
+            if (telemetryInterval) clearInterval(telemetryInterval);
+
+            if (!simulationMode) {
+                if (node1Ip) fetch(`${node1Ip}/relay/off`).catch(err => { });
+                if (node2Ip) fetch(`${node2Ip}/stop`).catch(err => { });
+            }
+
+            showToast('error', 'EMERGENCY LOCKDOWN ACTIVATED. System powered down instantly.');
+            alert("Emergency stop engaged. Station and induction relays switched off immediately. Resuming home page.");
+            showPage('home');
+        }
+
+        // Invoice simulated payment action
+        function payBill() {
+            // Save to logs history
+            const table = document.getElementById('history-table-body');
+            const row = document.createElement('tr');
+            row.className = "hover:bg-white/5 transition border-b border-white/5";
+
+            const now = new Date();
+            const dateStr = now.toLocaleDateString() + " " + now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            const id = "VC-" + Math.floor(1000 + Math.random() * 9000);
+
+            row.innerHTML = `
+                <td class="p-6">${dateStr}</td>
+                <td class="p-6 text-cyan-400 font-bold">${id}</td>
+                <td class="p-6">${energyConsumed.toFixed(5)} kWh</td>
+                <td class="p-6 font-bold text-emerald-400">${document.getElementById('bill-total').innerText}</td>
+                <td class="p-6"><span class="status-badge bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 font-bold">Paid</span></td>
+            `;
+            table.appendChild(row);
+
+            showToast('success', 'Invoice cleared. Payment transaction authorized.');
+            showPage('home');
+        }
+
+        function clearHistory() {
+            document.getElementById('history-table-body').innerHTML = '';
+            showToast('info', 'Session logs cleared.');
+        }
+
+        // Chart.js Configuration
+        function initChart() {
+            const ctx = document.getElementById('chargingChart');
+            if (!ctx) return;
+
+            if (chartInstance) chartInstance.destroy();
+
+            chartInstance = new Chart(ctx.getContext('2d'), {
+                type: 'line',
+                data: {
+                    labels: Array(20).fill(""),
+                    datasets: [{
+                        label: 'Power Delivery (W)',
+                        data: Array(20).fill(0.0),
+                        borderColor: '#00ffcc',
+                        borderWidth: 2,
+                        fill: true,
+                        backgroundColor: 'rgba(0, 255, 204, 0.04)',
+                        tension: 0.4,
+                        pointRadius: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: {
+                            display: true,
+                            suggestedMin: 0,
+                            suggestedMax: 30,
+                            grid: { color: 'rgba(255,255,255,0.03)' },
+                            ticks: { color: '#666' }
+                        },
+                        x: { display: false }
+                    },
+                    animation: false
+                }
+            });
+        }
+
+        // Initialize Window Actions
+        window.onload = () => {
+            loadSettings();
+            startHardwarePolling();
+
+            // Push mock logs to have content on start
+            const table = document.getElementById('history-table-body');
+            table.innerHTML = `
+                <tr class="hover:bg-white/5 transition border-b border-white/5">
+                    <td class="p-6">15/07/2026 11:15 AM</td>
+                    <td class="p-6 text-cyan-400 font-bold">VC-4122</td>
+                    <td class="p-6">12.50000 kWh</td>
+                    <td class="p-6 font-bold text-emerald-400">₹184.37</td>
+                    <td class="p-6"><span class="status-badge bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 font-bold">Paid</span></td>
+                </tr>
+                <tr class="hover:bg-white/5 transition border-b border-white/5">
+                    <td class="p-6">14/07/2026 04:22 PM</td>
+                    <td class="p-6 text-cyan-400 font-bold">VC-3189</td>
+                    <td class="p-6">8.42000 kWh</td>
+                    <td class="p-6 font-bold text-emerald-400">₹124.19</td>
+                    <td class="p-6"><span class="status-badge bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 font-bold">Paid</span></td>
+                </tr>
+            `;
+
+            showPage('home');
+        };
+    </script>
+</body>
+
+</html>
