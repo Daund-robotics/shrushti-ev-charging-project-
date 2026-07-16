@@ -1,0 +1,166 @@
+========================================================================
+                     VOLTCHARGE EV CHARGING SYSTEM
+                   COMPLETE PROJECT DOCUMENTATION
+========================================================================
+
+------------------------------------------------------------------------
+1. PROJECT OVERVIEW
+------------------------------------------------------------------------
+VoltCharge is an IoT-enabled Wireless EV Induction Charging System. The 
+project demonstrates a smart vehicle docking and charging station that 
+uses automatic alignment sensing, audio-visual driver feedback, safety 
+locks, and real-time charging telemetry on a web dashboard.
+
+The system is coordinated via an ESP32-based multi-node IoT network and 
+a responsive web interface with a simulation cockpit for offline testing.
+
+------------------------------------------------------------------------
+2. SYSTEM ARCHITECTURE
+------------------------------------------------------------------------
+The system consists of three independent microcontroller nodes (ESP32) and
+a central Web Dashboard:
+- Node 1 (Charging Station): Detects vehicle arrival, manages the main 
+  power charging relay, and displays charging telemetry.
+- Node 2 (Charging Robot): Uses an ultrasonic sensor to measure physical 
+  distance/alignment between the charging coil and the vehicle coil.
+- Node 3 (Electric Car): Displays alignment progress on an onboard LCD 
+  and sounds a buzzer to guide the driver into perfect alignment.
+- Web Dashboard: Serves as the user interface for monitoring alignment, 
+  starting/stopping charging, processing invoices, and viewing historical logs.
+- Python Launcher: Starts the web application using either Vite/Node.js or 
+  falls back to Python's built-in HTTP server.
+
+------------------------------------------------------------------------
+3. LIST OF COMPONENTS USED
+------------------------------------------------------------------------
+A. Microcontrollers & Wireless Nodes:
+   - 3x ESP32 Development Boards (ESP32 Dev Module with integrated Wi-Fi)
+
+B. Node 1 (Station) Components:
+   - 1x I2C LCD Display (16x2 characters)
+     * SDA: GPIO 21
+     * SCL: GPIO 22
+   - 1x Infrared (IR) Sensor Module (Car arrival detection)
+     * Signal Output Pin: GPIO 18 (Active LOW)
+   - 1x 5V Relay Module (Switches wireless charging transmitter pad)
+     * Control Pin: GPIO 19 (Active HIGH)
+
+C. Node 2 (Robot) Components:
+   - 1x Ultrasonic Sensor (HC-SR04) (Measures distance for coil alignment)
+     * Trigger Pin: GPIO 4
+     * Echo Pin: GPIO 5
+
+D. Node 3 (Car) Components:
+   - 1x I2C LCD Display (16x2 characters)
+     * SDA: GPIO 21
+     * SCL: GPIO 22
+   - 1x Active Buzzer Module (Driver feedback during alignment)
+     * Control Pin: GPIO 23 (Active HIGH)
+   - 1x Induction Receiver Coil (Implied concept for wireless charging power)
+
+E. Software & Development Tools:
+   - Web Server/Host: Vite development server or Python socketserver
+   - Front-end Technologies: HTML5, Tailwind CSS (styling), Font Awesome (icons), 
+     Chart.js (real-time telemetry plots), JavaScript (fetch API, event handling)
+   - Back-end / Launcher: Python 3
+   - Firmware Environment: Arduino IDE (C++ compiler for ESP32)
+   - Firmware Libraries: WiFi.h, WebServer.h, Wire.h, LiquidCrystal_I2C.h
+
+------------------------------------------------------------------------
+4. DETAILED FIRMWARE FUNCTIONALITY (ESP32 NODES)
+------------------------------------------------------------------------
+All nodes connect to a local Wi-Fi network (SSID: "Air", Password: "99999999")
+and run asynchronous web servers listening on Port 80. They support CORS 
+headers so the Web Dashboard can make remote HTTP GET requests to read 
+status parameters or trigger actions.
+
+- Node 1 (Station) Firmware:
+  * Runs endpoints:
+    - GET `/status`: Returns JSON containing car_present (IR sensor state), 
+      relay_state, and system_state ("idle", "ready", or "charging").
+    - GET `/relay/on`: Turns on the relay (GPIO 19 to HIGH) and sets state to "charging".
+    - GET `/relay/off`: Turns off the relay (GPIO 19 to LOW) and returns system to "ready" or "idle".
+    - GET `/update?v=...&c=...&bat=...&kwh=...`: Updates display variables and 
+      shows them in real-time on the 16x2 LCD.
+  * Local Loop: Checks the IR Sensor status. If a car is present, LCD shows 
+    "Welcome to EV Charging Station". If absent, LCD displays standby message.
+
+- Node 2 (Robot) Firmware:
+  * Runs endpoint:
+    - GET `/status`: Triggers the ultrasonic sensor using TRIG and ECHO pins, 
+      calculates distance in centimeters, maps distance to an alignment 
+      percentage (linear scale between 3cm (100% aligned) and 10cm (0% aligned)), 
+      and returns it as JSON.
+
+- Node 3 (Car) Firmware:
+  * Runs endpoints:
+    - GET `/status`: Returns online confirmation and current alignment percentage.
+    - GET `/update?percent=...`: Sets alignment percentage variable and updates the onboard LCD.
+  * Local Loop: Controls the buzzer state machine dynamically based on alignment percentage:
+    - 0% Alignment: Buzzer is completely silent.
+    - 1% to 99% Alignment: Buzzer beeps intermittently (150ms active, 350ms silent) 
+      to prompt the driver.
+    - 100% Alignment: Buzzer triggers a single continuous 2-second beep and is then muted.
+
+------------------------------------------------------------------------
+5. SYSTEM WORKFLOW & TELEMETRY CYCLE
+------------------------------------------------------------------------
+Step 1: Standby State
+- No vehicle is present. Node 1 shows "VoltCharge EV Charging Station".
+- Node 3's screen shows "Coil Alignment 0%".
+- Buzzer is silent. Relay is off.
+
+Step 2: Vehicle Arrival
+- The car pulls into the charging bay.
+- Node 1's IR Sensor detects the vehicle (signal goes LOW).
+- Node 1's LCD changes to "Welcome to EV Charging Station".
+- The dashboard polls Node 1 and updates status to "Car Present".
+
+Step 3: Coil Alignment Guidance
+- Node 2 continuously monitors proximity of the charger coils using the ultrasonic sensor.
+- If distance >= 10 cm, alignment is 0%.
+- If distance is between 3 cm and 10 cm, the dashboard reads this value and forwards 
+  it to Node 3.
+- Node 3's LCD prints "Aligning: X%" and the buzzer beeps intermittently.
+- When distance <= 3 cm (100% alignment reached):
+  * Node 3's LCD shows "Aligned: 100%".
+  * Buzzer sounds a continuous 2-second beep and turns off.
+  * Dashboard changes indicator status to green "FULLY ALIGNED" and releases the safety interlock.
+
+Step 4: Charging Action & Safety Interlock
+- Safety Interlock: The "Start Charging" button on the dashboard is locked out 
+  unless coil alignment is exactly 100%.
+- Once 100% aligned, the user clicks "Start Charging".
+- The Dashboard sends a GET request to Node 1 (`/relay/on`), switching on the relay 
+  to supply power to the wireless charging transmitter.
+- Real-time Telemetry: An active charging loop simulates power transfer (12V, 2A, 
+  approx. 24W) with minor grid fluctuations. It calculates cumulative energy consumption 
+  in kilowatt-hours (kWh) and increases the battery level (incrementing 1% every 4 seconds).
+- Telemetry displays dynamically on the Dashboard (via a live Chart.js power graph and 
+  battery wave animation) and is simultaneously pushed to Node 1's LCD (`/update`).
+
+Step 5: Stopping & Billing
+- The user clicks "Stop Charging" (or the battery reaches 100%).
+- The Dashboard requests Node 1 to switch the relay OFF (`/relay/off`).
+- An invoice is generated on screen displaying:
+  * Total Energy Consumed (kWh)
+  * Subtotal & GST (18%)
+  * Total Payable (Standard Rate: ₹12.50 per kWh, with a minimum ₹1.00 fee)
+  * QR Code for Mock UPI Payment.
+- Once the user clicks "I Have Paid The Bill", the session details are logged into 
+  the Dashboard's session log history, and the system resets back to the Standby State.
+
+------------------------------------------------------------------------
+6. WEB DASHBOARD & SIMULATION MODES
+------------------------------------------------------------------------
+The web interface (index.html) has two distinct modes:
+1. Live Hardware Mode: Communicates directly over the network via IP addresses 
+   entered in the settings panel (which are saved in local storage).
+2. Hardware Simulation Mode (Default): Allows testing the entire workflow without 
+   physical ESP32 hardware. 
+   - Includes manual controls to simulate IR car arrival ("Arrive Car" button).
+   - Includes a distance slider (15cm to 1cm) to simulate coil alignment.
+   - Renders simulated I2C LCD displays on the dashboard screen showing what the 
+     physical screens would show.
+   - Provides an "Emergency" shutdown button that powers down relays immediately.
+========================================================================
